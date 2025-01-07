@@ -1,1 +1,1 @@
-Custom Unreal 5.3 NetCode with GGPO Custom Implementation.
+Unreal 5.3 NetCode with GGPO Custom Implementation.
