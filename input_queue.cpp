@@ -170,23 +170,17 @@ InputQueue::GetInput(int requested_frame, GameInput *input)
          _prediction = _inputs[PREVIOUS_FRAME(_head)];
          int *intPointer = reinterpret_cast<int *>(_prediction.bits);
          int predInt = *intPointer;
-         //if(_id == 1){GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Pred: %d"), predInt));}
-         
-         
-         
-         if(predInt == 1 || predInt == 2 || predInt == 3 || predInt == 4 || predInt == 11 || predInt == 13){
-            //UE_LOG(LogTemp, Display, TEXT("Keep Predicting The Same Input..."));
-            //if(_id == 1){GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Keeping Pred")));}
+
+          if(predInt == 11 || predInt == 12 || predInt == 13 || predInt == 14){
+            // Do Nothing
          } else {
             GameInput nullInput;
-            int32 nullInt = 0;
+            int32 nullInt = 10;
             char *nullChar = reinterpret_cast<char *>(&nullInt);
             nullInput.init(_prediction.frame, nullChar, sizeof(int32));
             _prediction = nullInput;
-            if(_id == 1){//GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Null")));
-                  //UE_LOG(LogTemp, Display, TEXT("Null Prediction"));
-            }
-         }  
+         } 
+         
       }
       _prediction.frame++;
    }
@@ -212,12 +206,11 @@ InputQueue::AddInput(GameInput &input)
    int new_frame;
 
    Log("adding input frame number %d to queue.\n", input.frame);
-
+   //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Input Queue Add Input!!! %d"), predInt));
    /*
     * These next two lines simply verify that inputs are passed in 
     * sequentially by the user, regardless of frame delay.
     */
-
    
    
    ASSERT(_last_user_added_frame == GameInput::NullFrame ||

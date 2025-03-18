@@ -1,7 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "PoliticalUndergroundGameMode.h"
-#include "PoliticalUndergroundCharacter.h"
 #include "BasePlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"

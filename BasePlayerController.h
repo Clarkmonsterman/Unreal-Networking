@@ -1,15 +1,15 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-
+#include <atomic>
+#include <string>
 #include "CoreMinimal.h"
 #include "UObject/StrongObjectPtr.h"
 #include "GameFramework/PlayerController.h"
 #include "Math/UnrealMathUtility.h" 
-#include "PoliticalUndergroundCharacter.h"
+#include "../PoliticalUndergroundCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "PoliticalGameStateBase.h"
-#include "DonaldRenderMachine.h"
 #include "BasePlayerController.generated.h"
 
 
@@ -17,6 +17,16 @@
 /**
  * 
  */
+
+ UENUM(BlueprintType)
+enum class EPoliticalCharacter : uint8
+{
+	VE_None UMETA(DisplayName = "None"),
+	VE_Boden UMETA(DisplayName = "Boden"),
+	VE_Tremp UMETA(DisplayName = "Tremp"),
+	
+
+};
 
 
 UENUM(BlueprintType)
@@ -38,30 +48,16 @@ enum class EInputType : uint8
 	VE_Block UMETA(DisplayName = "Block"),
 	VE_Block_Release UMETA(DisplayName = "Block_Release"),
 	VE_Jump UMETA(DisplayName = "Jump"),
-	VE_Buffer UMETA(DisplayName = "Buffer"),
-	VE_Release UMETA(DisplayName = "Release"),
-	VE_Sync UMETA(DisplayName = "Sync"),
-	
+	VE_ReleaseAttack1 UMETA(DisplayName = "ReleaseAttack1"),
+	VE_ReleaseAttack2 UMETA(DisplayName = "ReleaseAttack2"),
+	VE_ReleaseAttack3 UMETA(DisplayName = "ReleaseAttack3"),
+	VE_ReleaseAttack4 UMETA(DisplayName = "ReleaseAttack4"),
 	// must go back through .cpp file when sobererrr.... Lol
 
 };
 
 
 
-UENUM(BlueprintType)
-enum class EMenuType : uint8
-{
-	VE_None UMETA(DisplayName = "None"),
-	VE_Up UMETA(DisplayName = "Up"),
-	VE_Down UMETA(DisplayName = "Down"),
-	VE_Right UMETA(DisplayName = "Right"),
-	VE_Left UMETA(DisplayName = "Left"),
-	VE_Confirm UMETA(DisplayName = "Confirm"),
-	VE_Back UMETA(DisplayName = "Back"),
-	
-	// must go back through .cpp file when sobererrr.... Lol
-
-};
 
 UCLASS()
 class ABasePlayerController : public APlayerController
@@ -82,8 +78,6 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
-	EMenuType MenuPress;
 
 	int32 controllerTicks;
 
@@ -115,11 +109,19 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void CallAttack1();
 	UFUNCTION(BlueprintCallable)
+	void ReleaseAttack1();
+	UFUNCTION(BlueprintCallable)
 	void CallAttack2();
+	UFUNCTION(BlueprintCallable)
+	void ReleaseAttack2();
 	UFUNCTION(BlueprintCallable)
 	void CallAttack3();
 	UFUNCTION(BlueprintCallable)
+	void ReleaseAttack3();
+	UFUNCTION(BlueprintCallable)
 	void CallAttack4();
+	UFUNCTION(BlueprintCallable)
+	void ReleaseAttack4();
 	UFUNCTION(BlueprintCallable)
 	void CallSpecialAttack1();
 	UFUNCTION(BlueprintCallable)
@@ -128,12 +130,6 @@ public:
 	void CallHoldPressed();
 	UFUNCTION(BlueprintCallable)
 	void CallHoldReleased();
-
-	UFUNCTION(BlueprintCallable)
-	void AddToBuffer();
-
-	UFUNCTION(BlueprintCallable)
-	void ReleaseFromBuffer();
 
 	
 	UFUNCTION(BlueprintCallable)
@@ -155,6 +151,40 @@ public:
 	int64 MenuSelectFrame;
 	int64 ActionSelectFrame;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	bool Continous;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	bool MenuMoved;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	EMenuType MenuPress;
+
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	int Row = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	int Row_Init = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	int Column = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	int Total_Rows;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	int Total_Columns;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	int Last_Row;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	int Last_Column;
+
+	void MoveSelection();
 
 	void DetermineInputDeviceDetails(FKey _keyPressed);
 
@@ -204,6 +234,7 @@ public:
 
 
 	void SendLocalInputs();
+	void SetMenuInputs();
 
 
 	
@@ -211,8 +242,9 @@ public:
 	void GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const;
 
 private:
-	UPROPERTY(Replicated)
-	EInputType inputPress;
-
 	
+	int32 inputPressed;
+	void convertInputsPressed(int32 input);
+	
+
 };

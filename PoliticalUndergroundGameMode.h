@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PoliticalUndergroundCharacter.h"
+#include "../PoliticalUndergroundCharacter.h"
 #include "GameFramework/GameModeBase.h"
 #include "BasePlayerController.h"
 #include "PoliticalUndergroundGameMode.generated.h"

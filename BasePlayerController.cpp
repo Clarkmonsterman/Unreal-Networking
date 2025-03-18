@@ -13,6 +13,9 @@
 #include "GameFramework/PlayerController.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Engine.h"
+#include "EngineUtils.h" // Include the header for TActorIterator
+#include "CoreMinimal.h"
+
 #include "Net/UnrealNetwork.h"
 #include "BaseGameInstance.h"
 
@@ -59,8 +62,11 @@ void ABasePlayerController::BeginPlay(){
     if(GetLocalPlayer() != nullptr){
         LocalPlayer_Id = GetLocalPlayer()->GetControllerId();
         PlatFormUser_ID = GetLocalPlayer()->GetPlatformUserId();
-        //UE_LOG(LogTemp, Warning, TEXT("LocalPlayer ID: %d"), LocalPlayer_Id);
-       // UE_LOG(LogTemp, Display, TEXT("PlatFormID: %d"), PlatFormUser_ID);
+        UE_LOG(LogTemp, Warning, TEXT("LocalPlayer ID: %d"), LocalPlayer_Id);
+        UE_LOG(LogTemp, Display, TEXT("PlatFormID: %d"), PlatFormUser_ID);
+
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("LocalPlayer ID: %d"), LocalPlayer_Id));
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("PlatFormID: %d"), PlatFormUser_ID));
     } else {
         LocalPlayer_Id = -10;
     }
@@ -94,6 +100,8 @@ void ABasePlayerController::Tick(float DeltaTime){
         PlatFormUser_ID = GetLocalPlayer()->GetPlatformUserId();
         //UE_LOG(LogTemp, Warning, TEXT("Controller ID: %d"), LocalPlayer_Id);
         //UE_LOG(LogTemp, Display, TEXT("PlatFormID: %d"), PlatFormUser_ID);
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("LocalPlayer ID: %d"), LocalPlayer_Id));
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("PlatFormID: %d"), PlatFormUser_ID));
     } else {
         LocalPlayer_Id = -10;
         //UE_LOG(LogTemp, Warning, TEXT("Controller ID: %d"), Id);
@@ -102,9 +110,11 @@ void ABasePlayerController::Tick(float DeltaTime){
     
     if(MenuSelectFrame > 0){
         --MenuSelectFrame;
+        SetMenuInputs();
     } else if(MenuSelectFrame == 0){
         //UE_LOG(LogTemp, Display, TEXT("Reset Menu Select"));
         MenuPress = EMenuType::VE_None;
+        SetMenuInputs();
         --MenuSelectFrame;
     }
 
@@ -120,13 +130,10 @@ void ABasePlayerController::Tick(float DeltaTime){
             if(postSpawnTicks == 1){
                 SpawnGameCamera();
             }
-            if(postSpawnTicks == 60){
+            if(postSpawnTicks == 120){
                 Player_Two.Get()->StartFight();
                 Player_One.Get()->StartFight();
-            }
-            if(HasAuthority() && postSpawnTicks == 70){
-                inputPress = EInputType::VE_Sync;
-                ActionSelectFrame = 1;
+                
             }
             
         }
@@ -141,7 +148,7 @@ void ABasePlayerController::Tick(float DeltaTime){
             SendLocalInputs();
             ActionSelectFrame = 0;
         } else if(ActionSelectFrame == 0){
-            inputPress = EInputType::VE_None;
+            convertInputsPressed(10);
             SendLocalInputs();
         }
     }
@@ -153,21 +160,24 @@ void ABasePlayerController::SetupInputComponent(){
     Super::SetupInputComponent();
     
 	InputComponent->BindAction("Jump", IE_Pressed, this, &ABasePlayerController::CallJump);
-	InputComponent->BindAxis("Move Right / Left", this, &ABasePlayerController::CallMoveRight);
-	InputComponent->BindAxis("Move Forward / Backward", this, &ABasePlayerController::CallMoveForward);
-	InputComponent->BindAction("Block", IE_Pressed, this, &ABasePlayerController::CallStartBlocking);
-	InputComponent->BindAction("Block", IE_Released, this, &ABasePlayerController::CallStopBlocking);
-	InputComponent->BindAction("Attack1", IE_Pressed, this, &ABasePlayerController::CallAttack1);
-	InputComponent->BindAction("Attack2", IE_Pressed, this, &ABasePlayerController::CallAttack2);
-	InputComponent->BindAction("Attack3", IE_Pressed, this, &ABasePlayerController::CallAttack3);
-	InputComponent->BindAction("Attack4", IE_Pressed, this, &ABasePlayerController::CallAttack4);
-	InputComponent->BindAction("SpecialAttack1", IE_Pressed, this, &ABasePlayerController::CallSpecialAttack1);
-	InputComponent->BindAction("SpecialAttack2", IE_Pressed, this, &ABasePlayerController::CallSpecialAttack2);
-	InputComponent->BindAction("Hold", IE_Pressed, this, &ABasePlayerController::CallHoldPressed);
-	InputComponent->BindAction("Hold", IE_Released, this, &ABasePlayerController::CallHoldReleased);
-    InputComponent->BindAction("AddToInputBuffer", IE_Pressed, this, &ABasePlayerController::AddToBuffer);
-    InputComponent->BindAction("AddToInputBuffer", IE_Released, this, &ABasePlayerController::ReleaseFromBuffer);
+    InputComponent->BindAxis("Move Right / Left", this, &ABasePlayerController::CallMoveRight);
+    InputComponent->BindAxis("Move Forward / Backward", this, &ABasePlayerController::CallMoveForward);
+    InputComponent->BindAction("Block", IE_Pressed, this, &ABasePlayerController::CallStartBlocking);
+    InputComponent->BindAction("Block", IE_Released, this, &ABasePlayerController::CallStopBlocking);
+    InputComponent->BindAction("Attack1", IE_Pressed, this, &ABasePlayerController::CallAttack1);
+    InputComponent->BindAction("Attack1", IE_Released, this, &ABasePlayerController::ReleaseAttack1);
+    InputComponent->BindAction("Attack2", IE_Pressed, this, &ABasePlayerController::CallAttack2);
+    InputComponent->BindAction("Attack2", IE_Released, this, &ABasePlayerController::ReleaseAttack2);
+    InputComponent->BindAction("Attack3", IE_Pressed, this, &ABasePlayerController::CallAttack3);
+    InputComponent->BindAction("Attack3", IE_Released, this, &ABasePlayerController::ReleaseAttack3);
+    InputComponent->BindAction("Attack4", IE_Pressed, this, &ABasePlayerController::CallAttack4);
+    InputComponent->BindAction("Attack4", IE_Released, this, &ABasePlayerController::ReleaseAttack4);
+    InputComponent->BindAction("SpecialAttack1", IE_Pressed, this, &ABasePlayerController::CallSpecialAttack1);
+    InputComponent->BindAction("SpecialAttack2", IE_Pressed, this, &ABasePlayerController::CallSpecialAttack2);
+    InputComponent->BindAction("Hold", IE_Pressed, this, &ABasePlayerController::CallHoldPressed);
+    InputComponent->BindAction("Hold", IE_Released, this, &ABasePlayerController::CallHoldReleased);
     InputComponent->BindAction("AnyKey", IE_Released, this, &ABasePlayerController::DetermineInputDeviceDetails);
+
    
 
 
@@ -270,39 +280,18 @@ void ABasePlayerController::DetermineInputDeviceDetails(FKey _keyPressed){
         //UE_LOG(LogTemp, Display, TEXT("UseGamePad: %s"), possessedPawn->UseGamePad? TEXT("True") : TEXT("False"));
     }
 
-    if(IsNetwork_Player){
-        APawn* ControlledPawn = GetPawn();
-        if(!ControlledPawn){
-            //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("No Possessed Pawn")));
-            //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("PlayerNumber: %d"), PlayerNumber));
-        } else {
-            //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Possessed Pawn")));
-            //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("PlayerNumber: %d"), PlayerNumber));
-        }
-    }
-    
     
 }
 
 
-void ABasePlayerController::AddToBuffer(){
-    //inputPress = EInputType::VE_Buffer;
-    //ActionSelectFrame = 1;
-}
-void ABasePlayerController::ReleaseFromBuffer(){
-    //inputPress = EInputType::VE_Release;
-    //ActionSelectFrame = 1;
-}
 
 void ABasePlayerController::CallMoveRight(float _value){
 
-    if(_value > 0){
-        inputPress = EInputType::VE_Forward;
-        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Call Move Forward")));
+    if(_value > 0 && ActionSelectFrame != 1){
+        convertInputsPressed(11);
         ActionSelectFrame = 1;
-    } else if(_value < 0){
-        inputPress = EInputType::VE_Back;
-        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Call Move Backward")));
+    } else if(_value < 0 && ActionSelectFrame != 1){
+        convertInputsPressed(12);
         ActionSelectFrame = 1;
     }
 
@@ -314,98 +303,225 @@ void ABasePlayerController::CallMoveForward(float _value){
      
     
     
-    if(_value > 0){
-        inputPress = EInputType::VE_Up;
+    if(_value > 0 && ActionSelectFrame != 1){
+        convertInputsPressed(13);
         ActionSelectFrame = 1;
-    } else if(_value < 0) {
-        inputPress = EInputType::VE_Down;
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Calling Up From Controller")));
+    } else if(_value < 0 && ActionSelectFrame != 1) {
+        convertInputsPressed(14);
         ActionSelectFrame = 1;
     }
 
     
 }
 
-void ABasePlayerController::CallJump(){
 
-   inputPress = EInputType::VE_Jump;
-   ActionSelectFrame = 1;
-}
-
-void ABasePlayerController::CallStartBlocking(){
-
-    inputPress = EInputType::VE_Block;
-    ActionSelectFrame = 1;
-}
-
-void ABasePlayerController::CallStopBlocking(){
-
-    inputPress = EInputType::VE_Block_Release;
-    ActionSelectFrame = 1;
-}
 
 void ABasePlayerController::CallAttack1(){
     //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Call Attack1")));
-    inputPress = EInputType::VE_Attack1;
+    convertInputsPressed(15);
     ActionSelectFrame = 1;
 }
+
+
 
 void ABasePlayerController::CallAttack2(){
     //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Call Attack2")));
-    inputPress = EInputType::VE_Attack2;
+    convertInputsPressed(16);
     ActionSelectFrame = 1;
 }
 
+
+
 void ABasePlayerController::CallAttack3(){
-    //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Call Attack3")));
-    inputPress = EInputType::VE_Attack3;
+    GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Call Attack2")));
+    convertInputsPressed(17);
     ActionSelectFrame = 1;
 }
+
+
+
+
 
 void ABasePlayerController::CallAttack4(){
     //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Call Attack4")));
-   
-    inputPress = EInputType::VE_Attack4;
+    convertInputsPressed(18);
     ActionSelectFrame = 1;
     
 }
 
+
 void ABasePlayerController::CallSpecialAttack1(){
 
-    inputPress = EInputType::VE_SPAttack1;
+    convertInputsPressed(19);
     ActionSelectFrame = 1;
 }
 void ABasePlayerController::CallSpecialAttack2(){
 
-    inputPress = EInputType::VE_SPAttack2;
+    convertInputsPressed(20);
     ActionSelectFrame = 1;
 }
 
 void ABasePlayerController::CallHoldPressed(){
 
-    inputPress = EInputType::VE_Hold;
+    convertInputsPressed(21);
     ActionSelectFrame = 1;
 }
 void ABasePlayerController::CallHoldReleased(){
 
-    inputPress = EInputType::VE_Hold_Release;
+    convertInputsPressed(22);
     ActionSelectFrame = 1;
 }
 
 
 
-void ABasePlayerController::SendLocalInputs(){
-   uint8 retVal = static_cast<uint8>(inputPress);
-   GameState->RetrieveLocalInputs_Implementation(retVal);
+void ABasePlayerController::CallStartBlocking(){
+   convertInputsPressed(23);
+    ActionSelectFrame = 1;
+}
+
+void ABasePlayerController::CallStopBlocking(){
+
+    convertInputsPressed(24);
+    ActionSelectFrame = 1;
+}
+
+
+void ABasePlayerController::CallJump(){
+    //UE_LOG(LogTemp, Display, TEXT("Call Jump: %d"), postSpawnTicks);
+   convertInputsPressed(25);
+   ActionSelectFrame = 1;
+}
+
+
+void ABasePlayerController::ReleaseAttack1(){
+    //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Release Attack1")));
+    convertInputsPressed(26);
+    ActionSelectFrame = 1;
+   
+}
+
+void ABasePlayerController::ReleaseAttack2(){
+    //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Release Attack2")));
+    convertInputsPressed(27);
+    ActionSelectFrame = 1;
+   
+}
+
+void ABasePlayerController::ReleaseAttack3(){
+    //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Release Attack3")));
+    convertInputsPressed(28);
+    ActionSelectFrame = 1;
+   
+}
+
+
+void ABasePlayerController::ReleaseAttack4(){
+    //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Release Attack4")));
+    convertInputsPressed(29);
+    ActionSelectFrame = 1;
+   
+}
+
+
+
+void ABasePlayerController::convertInputsPressed(int32 input){
+    if(inputPressed != -1){
+        inputPressed = inputPressed*100 + input;
+    } else {
+        inputPressed = input;
+    }
+}
+
+
+void ABasePlayerController::SendLocalInputs() {
+   
+    
+
+
+    if(ActionSelectFrame != 0){
+        float test = inputPressed / 10.0f;
+        if(test >= 10){
+            //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Input Sent: %d"), inputPressed));
+        }
+    } else {
+       // GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Zero Input Sent: %d"), inputPressed));
+    }
+
+    
+    if (GameState) {
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Input Sent: %d"), finalValue));
+        GameState->RetrieveLocalInputs_Implementation(inputPressed);
+    }
+    inputPressed = -1;
+
+}
+
+
+void ABasePlayerController::SetMenuInputs(){
+   
+    if(MenuPress != EMenuType::VE_None){
+        MoveSelection();
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Total Rows: %d"), Total_Rows));
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Total Columns: %d"), Total_Columns));
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Current Row: %d"), Row));
+        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Current Column: %d"), Column));
+        if(Column != 0){
+            //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Row Init: %d"), Row_Init));
+            
+
+        }
+        
+
+    } else {
+        MenuMoved = false;
+    }
 }
 
 
 void ABasePlayerController::NetworkGameStateCast_Attempt(){
     
     GameState = Cast<APoliticalGameStateBase>(GetWorld()->GetGameState());
+
+    int Remote_Port_Int = 0;
+    FString Remote_IP;
+
     if(GameState){
         GameState->SetClientCharacter_Implementation(Weak_PlayerOne);
         GameState->SetConnectedCharacter_Implementation(Weak_PlayerTwo); 
-        GameState->GetConnectedPlayerNetworkInfo_Implementation();
+
+        if(!HasAuthority()){
+
+            UNetConnection* NetConnection_Info = GetNetConnection();
+            
+            if (!NetConnection_Info)
+            {
+                GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("NetConnection is null!")));
+                UE_LOG(LogTemp, Error, TEXT("NetConnection is null!"));
+                return;
+            }
+
+            if (NetConnection_Info->URL.Host.IsEmpty())
+            {
+                GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("NetConnection URL Host is empty!")));
+
+                UE_LOG(LogTemp, Error, TEXT("NetConnection URL Host is empty!"));
+                return;
+            }
+
+            Remote_Port_Int = NetConnection_Info->URL.Port;
+            Remote_IP = *NetConnection_Info->URL.Host;
+
+        
+            //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Port: %d"), Remote_Port_Int));
+            //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("IP: %s"), *Remote_IP));
+            GameState->GetConnectedPlayerNetworkInfo_Implementation(Remote_Port_Int, Remote_IP);
+    
+        } else {
+            GameState->GetConnectedPlayerNetworkInfo_Implementation(Remote_Port_Int, Remote_IP);
+
+        }
+
         GameStateCast = true;
     } else {
         GameStateCast = false;
@@ -431,7 +547,9 @@ void ABasePlayerController::Update_Status_Implementation(bool status, int Player
 void ABasePlayerController::SpawnCharacter(FVector SpawnLoc, FRotator SpawnRot, int _player){
     // Spawn the character
                 
-        UObject* SpawnActor = Cast<UObject>(StaticLoadObject(UObject::StaticClass(), NULL, TEXT("/Game/ThirdPerson/Blueprints/BP_Don.BP_Don")));
+        UObject* SpawnActor = Cast<UObject>(StaticLoadObject(UObject::StaticClass(), NULL, TEXT("/Game/ThirdPerson/Blueprints/BP_Tremp.BP_Tremp")));
+        //UObject* SpawnActor = Cast<UObject>(StaticLoadObject(UObject::StaticClass(), NULL, TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPerson.BP_ThirdPerson")));
+
         if (SpawnActor)
         {
             UBlueprint* GeneratedBP = Cast<UBlueprint>(SpawnActor);
@@ -507,8 +625,11 @@ void ABasePlayerController::SpawnCharactersLocal_Implementation(){
             if (PlayerStart)
             {
                 FVector SpawnLoc = PlayerStart->GetActorLocation();
+                SpawnLoc.Z = 0;
                 FRotator SpawnRot= PlayerStart->GetActorRotation();
-
+                
+                //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Character Spawn Position: %s"), *SpawnLoc.ToString()));
+                //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Character Spawn Rotation: %s"), *SpawnRot.ToString()));
 
                 
                 if(PlayerNumber == 1){
@@ -540,7 +661,6 @@ void ABasePlayerController::SpawnCharactersLocal_Implementation(){
     }
 
     if(Player_One.Get()->IsValidLowLevel() && Player_Two.Get()->IsValidLowLevel()){
-        //GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Characters Valid")));
         Player_One.Get()->SetOtherPlayer();
         Player_One.Get()->CharacterPlayerNum = 1;
         Player_Two.Get()->SetOtherPlayer();
@@ -579,6 +699,202 @@ void ABasePlayerController::SpawnGameCamera(){
 
 
 
+
+
+
+void ABasePlayerController::MoveSelection()
+{
+    if(!Continous){
+   
+        switch (MenuPress)
+        {
+            case EMenuType::VE_None:
+                // Handle the 'None' case
+                break;
+
+            case EMenuType::VE_Up:
+                // Handle the 'Up' case
+                Last_Row = Row;
+                Last_Column = Column;
+                if (Row - 1 < 0)
+                {
+                    Row = Total_Rows - 1;
+                }
+                else
+                {
+                    Row = Row - 1;
+                }
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Down:
+                // Handle the 'Down' case
+                Last_Row = Row;
+                Last_Column = Column;
+                if (Row + 1 >= Total_Rows)
+                {
+                    Row = 0;
+                }
+                else
+                {
+                    Row = Row + 1;
+                }
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Right:
+                // Handle the 'Right' case
+                Last_Row = Row;
+                Last_Column = Column;
+                if (Column + 1 >= Total_Columns)
+                {
+                    Column = 0;
+                }
+                else
+                {
+                    Column = Column + 1;
+                }
+                Row_Init = Row;
+                Row = 0;
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Left:
+                // Handle the 'Left' case
+                Last_Row = Row;
+                Last_Column = Column;
+                if (Column - 1 < 0)
+                {
+                    Column = Total_Columns - 1;
+                }
+                else
+                {
+                    Column = Column - 1;
+                }
+                Row = Row_Init;
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Confirm:
+                // Handle the 'Confirm' case
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Back:
+                // Handle the 'Back' case
+                MenuMoved = true;
+                break;
+
+            default:
+                // Handle unexpected cases
+                break;
+        }
+    } else {
+
+        switch (MenuPress)
+        {
+            case EMenuType::VE_None:
+                // Handle the 'None' case
+                break;
+
+            case EMenuType::VE_Up:
+                // Handle the 'Up' case
+                Last_Row = Row;
+                Last_Column = Column;
+                if (Row - 1 < 0)
+                {
+                    Row = Total_Rows - 1;
+                }
+                else
+                {
+                    Row = Row - 1;
+                }
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Down:
+                // Handle the 'Down' case
+                Last_Row = Row;
+                Last_Column = Column;
+                if (Row + 1 >= Total_Rows)
+                {
+                    Row = 0;
+                }
+                else
+                {
+                    Row = Row + 1;
+                }
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Right:
+                // Handle the 'Right' case
+                Last_Row = Row;
+                Last_Column = Column;
+                if (Column + 1 >= Total_Columns)
+                {
+                    Column = 0;
+                    if(Row + 1 >= Total_Rows){
+                        Row = 0;
+                    } else {
+                        Row = Row + 1;
+                    }
+                    
+                }
+                else
+                {
+                    Column = Column + 1;
+                }
+               
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Left:
+                // Handle the 'Left' case
+                Last_Row = Row;
+                Last_Column = Column;
+                if (Column - 1 < 0)
+                {
+                    Column = Total_Columns - 1;
+                    if (Row - 1 < 0)
+                    {
+                        Row = Total_Rows - 1;
+                    }
+                    else
+                    {
+                        Row = Row - 1;
+                    }
+
+                }
+                else
+                {
+                    Column = Column - 1;
+                }
+                
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Confirm:
+                // Handle the 'Confirm' case
+                MenuMoved = true;
+                break;
+
+            case EMenuType::VE_Back:
+                // Handle the 'Back' case
+                MenuMoved = true;
+                break;
+
+            default:
+                // Handle unexpected cases
+                break;
+        }
+
+    }
+}
+
+
+
+
 void ABasePlayerController::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
 {
         Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -587,7 +903,6 @@ void ABasePlayerController::GetLifetimeReplicatedProps(TArray <FLifetimeProperty
         DOREPLIFETIME(ABasePlayerController, IsNetwork_Player);
         DOREPLIFETIME(ABasePlayerController, Simulator_Character_Set);
         DOREPLIFETIME(ABasePlayerController, PlayerNumber);
-        DOREPLIFETIME(ABasePlayerController,inputPress);
 
         
 }

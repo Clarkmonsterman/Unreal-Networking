@@ -3,11 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GlobalAtomicInt.h"
+#include "../BaseClasses/GlobalAtomicInt.h"
 #include "UObject/StrongObjectPtr.h"
 #include "GameFramework/GameStateBase.h"
 #include "networking.h"
-#include "SocketManager.h"
 #include "SocketSubsystem.h"
 #include "Sockets.h"
 #include "OnlineSubsystem.h"
@@ -16,7 +15,7 @@
 #include "IPAddress.h"
 #include "GGPOGameInstance.h"
 #include "include/ggponet.h"
-#include "PoliticalUndergroundCharacter.h"
+#include "../PoliticalUndergroundCharacter.h"
 #include "PoliticalGameStateBase.generated.h"
 
 /**
@@ -54,6 +53,23 @@ struct FightGameState {
 
 
 
+UENUM(BlueprintType)
+enum class EMenuType : uint8
+{
+	VE_None UMETA(DisplayName = "None"),
+	VE_Up UMETA(DisplayName = "Up"),
+	VE_Down UMETA(DisplayName = "Down"),
+	VE_Right UMETA(DisplayName = "Right"),
+	VE_Left UMETA(DisplayName = "Left"),
+	VE_Confirm UMETA(DisplayName = "Confirm"),
+	VE_Back UMETA(DisplayName = "Back"),
+	
+	// must go back through .cpp file when sobererrr.... Lol
+
+};
+
+
+
 
 UCLASS()
 class POLITICALUNDERGROUND_API APoliticalGameStateBase : public AGameStateBase
@@ -80,6 +96,7 @@ public:
 	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaTime) override;
+
 
 
 	bool GGPO_Started;
@@ -111,13 +128,14 @@ public:
 
 
 	UFUNCTION(Client, Reliable)
-	void GetConnectedPlayerNetworkInfo();
-	void GetConnectedPlayerNetworkInfo_Implementation();
+	void GetConnectedPlayerNetworkInfo(int Port, const FString& IP);
+	void GetConnectedPlayerNetworkInfo_Implementation(int Port, const FString& IP);
 
 
 	UFUNCTION(Client, Reliable)
-	void RetrieveLocalInputs(uint8 input);
-	void RetrieveLocalInputs_Implementation(uint8 input);
+	void RetrieveLocalInputs(int32 input);
+	void RetrieveLocalInputs_Implementation(int32 input);
+
 
 	UFUNCTION(Client, Reliable)
 	void SetClientCharacter(APoliticalUndergroundCharacter* Character);

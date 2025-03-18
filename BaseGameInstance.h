@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PoliticalUndergroundCharacter.h"
+#include "../PoliticalUndergroundCharacter.h"
 #include "PoliticalUndergroundGameMode.h"
 #include "Engine/GameInstance.h"
 #include "OnlineSubsystem.h"
